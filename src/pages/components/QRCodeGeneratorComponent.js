@@ -1,13 +1,16 @@
+import { API, graphqlOperation } from '@aws-amplify/api';
+import { useRouter } from 'next/dist/client/router';
 import QRCode from 'qrcode.react';
 import React, { useRef, useState } from 'react';
 
+import * as mutations from '../../graphql/mutations';
+
 export default function QRCodeComponent(params) {
+  const router = useRouter();
   const qrRef = useRef();
   const [url, setURL] = useState('');
 
-  function downloadQRCode(e) {
-    e.preventDefault();
-
+  function downloadImageLogic() {
     //grab what is currently being displayed in the canvas
     let canvas = qrRef.current.querySelector('canvas');
     //set the file format
@@ -23,8 +26,38 @@ export default function QRCodeComponent(params) {
     anchor.click();
     //after download, remove the anchor
     document.body.removeChild(anchor);
+  }
 
-    setURL('');
+  function downloadQRCode(e) {
+    e.preventDefault();
+    downloadImageLogic();
+  }
+
+  function saveQRCodeToAmplify(e) {
+    e.preventDefault();
+    //grab what is currently being displayed in the canvas
+    let canvas = qrRef.current.querySelector('canvas');
+    //set the file format
+    let image = canvas.toDataURL('image/png');
+    //create an anchor link dynamically
+    let anchor = document.createElement('a');
+    //set the anchor with an href (our link)
+    anchor.href = image;
+    console.log(anchor.href);
+
+    const qrDetails = {
+      url,
+      title: url,
+      canvas: anchor.href,
+    };
+
+    try {
+      API.graphql(
+        graphqlOperation(mutations.createQRCode, { input: qrDetails })
+      );
+    } catch (error) {
+      throw new Error(error);
+    }
   }
 
   const qrCode = (
@@ -41,6 +74,9 @@ export default function QRCodeComponent(params) {
           onChange={(e) => setURL(e.target.value)}
         />
         <button type='submit'>Download QR Code</button>
+      </form>
+      <form onSubmit={saveQRCodeToAmplify}>
+        <button type='submit'>Save QR Code</button>
       </form>
       <div ref={qrRef}>{qrCode}</div>
     </>

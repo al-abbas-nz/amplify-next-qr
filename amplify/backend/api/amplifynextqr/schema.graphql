@@ -1,0 +1,11 @@
+type QRCode @model @auth(rules: [{ allow: owner }]) {
+  id: ID!
+  url: String!
+  title: String!
+  canvas: String!
+}
+
+type Blog @model @auth(rules: [{ allow: private }]) {
+  id: ID!
+  name: String!
+}
