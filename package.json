@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aws-amplify/ui-react": "^1.2.13",
-    "aws-amplify": "^4.2.7",
+    "@aws-amplify/ui-components": "^1.7.8",
+    "@aws-amplify/ui-react": "^1.2.15",
+    "aws-amplify": "^4.2.9",
     "next": "11.1.2",
     "qrcode.react": "^1.0.1",
     "react": "17.0.2",

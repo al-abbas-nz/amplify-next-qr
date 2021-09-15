@@ -1,8 +1,6 @@
 import React from 'react';
-import { useUserData } from '../../lib/hooks';
 
-export default function Nav(props) {
-  const { user } = useUserData();
+export default function Nav({ user }) {
   return (
     <div>
       <h1>welcome {user?.username}!</h1>

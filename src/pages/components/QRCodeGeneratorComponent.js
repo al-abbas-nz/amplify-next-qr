@@ -33,7 +33,7 @@ export default function QRCodeComponent(params) {
     downloadImageLogic();
   }
 
-  function saveQRCodeToAmplify(e) {
+  async function saveQRCodeToAmplify(e) {
     e.preventDefault();
     //grab what is currently being displayed in the canvas
     let canvas = qrRef.current.querySelector('canvas');
@@ -52,9 +52,10 @@ export default function QRCodeComponent(params) {
     };
 
     try {
-      API.graphql(
+      await API.graphql(
         graphqlOperation(mutations.createQRCode, { input: qrDetails })
       );
+      router.push('/');
     } catch (error) {
       throw new Error(error);
     }
