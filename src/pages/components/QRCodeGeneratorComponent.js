@@ -1,14 +1,41 @@
-import { API, graphqlOperation } from '@aws-amplify/api';
+import { API, graphqlOperation } from 'aws-amplify';
+import * as mutations from '../../graphql/mutations';
+import * as queries from '../../graphql/queries';
 import { useRouter } from 'next/dist/client/router';
 import QRCode from 'qrcode.react';
-import React, { useRef, useState } from 'react';
-
-import * as mutations from '../../graphql/mutations';
+import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/dist/client/image';
 
 export default function QRCodeComponent(params) {
   const router = useRouter();
   const qrRef = useRef();
   const [url, setURL] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [qrCodes, setQrCodes] = useState([]);
+  const [apiError, setApiError] = useState();
+
+  useEffect(() => {
+    fetchQRCodes();
+  }, []);
+
+  async function fetchQRCodes() {
+    setLoading(true);
+    try {
+      const qrCodesRequest = await API.graphql(
+        graphqlOperation(queries.listQRCodes)
+      );
+      const qrCodes = qrCodesRequest.data.listQRCodes.items;
+      setQrCodes(qrCodes);
+      setApiError(null);
+    } catch (error) {
+      console.error('failed to fetch QR Codes: ', error);
+      setApiError(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function downloadImageLogic() {
     //grab what is currently being displayed in the canvas
@@ -43,7 +70,6 @@ export default function QRCodeComponent(params) {
     let anchor = document.createElement('a');
     //set the anchor with an href (our link)
     anchor.href = image;
-    console.log(anchor.href);
 
     const qrDetails = {
       url,
@@ -55,14 +81,67 @@ export default function QRCodeComponent(params) {
       await API.graphql(
         graphqlOperation(mutations.createQRCode, { input: qrDetails })
       );
-      router.push('/');
+      setQrCodes([...qrCodes, qrDetails]);
     } catch (error) {
       throw new Error(error);
     }
   }
 
+  async function handleDelete(qr) {
+    const qrDetails = { id: qr?.id, _version: qr?._version };
+
+    const confirmBox = window.confirm(
+      'Do you really want to delete this Crumb?'
+    );
+
+    if (confirmBox === true) {
+      try {
+        await API.graphql(
+          graphqlOperation(mutations.deleteQRCode, { input: qrDetails })
+        );
+        setQrCodes(qrCodes.filter((qr) => qr.id !== qrDetails.id));
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
+  }
+
   const qrCode = (
     <QRCode value={url} size={500} bgColor={'#ffffff'} fgColor={'#000000'} />
+  );
+
+  const savedQRCodes = (
+    <>
+      <h2>Saved QR Codes</h2>
+      {!qrCodes && <p>You have not saved any QR codes.</p>}
+      {qrCodes && (
+        <div>
+          {qrCodes
+            ?.filter((qr) => !qr._deleted)
+            .map((qr) => (
+              <div
+                key={qr.id}
+                style={{
+                  margin: '10px',
+                  display: 'flex',
+                  justifyContent: 'space-around',
+                }}
+              >
+                <h1>{qr.url}</h1>
+
+                <Image
+                  src={qr.canvas}
+                  key={qr.id}
+                  alt={qr.url}
+                  height='50'
+                  width='50'
+                />
+                <button onClick={() => handleDelete(qr)}>delete</button>
+              </div>
+            ))}
+        </div>
+      )}
+    </>
   );
 
   return (
@@ -80,6 +159,7 @@ export default function QRCodeComponent(params) {
         <button type='submit'>Save QR Code</button>
       </form>
       <div ref={qrRef}>{qrCode}</div>
+      <div>{savedQRCodes}</div>
     </>
   );
 }

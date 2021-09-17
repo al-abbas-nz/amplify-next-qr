@@ -10,7 +10,7 @@ export default function Home() {
     <div className={styles.container}>
       <Nav user={user} />
       <QRCodeComponent />
-      <SavedQRCodes />
+      {/* <SavedQRCodes /> */}
     </div>
   );
 }

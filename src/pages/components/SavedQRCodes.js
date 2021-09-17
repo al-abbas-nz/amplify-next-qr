@@ -8,18 +8,30 @@ import { useRouter } from 'next/dist/client/router';
 export default function SavedQRCodes(params) {
   const router = useRouter();
   const [savedQRCodes, setSavedQRCodes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [qrCodes, setQrCodes] = useState([]);
+  const [apiError, setApiError] = useState();
 
   useEffect(() => {
-    (async () => {
-      const allQRCodes = await API.graphql(
+    fetchQRCodes();
+  }, []);
+
+  async function fetchQRCodes() {
+    setLoading(true);
+    try {
+      const qrCodesRequest = await API.graphql(
         graphqlOperation(queries.listQRCodes)
       );
-      setSavedQRCodes(allQRCodes);
-      console.log(
-        savedQRCodes?.data?.listQRCodes?.items?.filter((qr) => !qr._deleted)
-      );
-    })();
-  }, []);
+      const qrCodes = qrCodesRequest.data.listQRCodes.items;
+      setQrCodes(qrCodes);
+      setApiError(null);
+    } catch (error) {
+      console.error('failed to fetch QR Codes: ', error);
+      setApiError(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleDelete(qr) {
     const qrDetails = { id: qr?.id, _version: qr?._version };
@@ -35,30 +47,29 @@ export default function SavedQRCodes(params) {
         await API.graphql(
           graphqlOperation(mutations.deleteQRCode, { input: qrDetails })
         );
-        router.push('/');
       } catch (error) {
         throw new Error(error);
       }
     }
   }
 
+  if (apiError) return <div>failed to load</div>;
+  if (!qrCodes) return <div>loading...</div>;
   return (
     <>
       <h2>Saved QR Codes</h2>
-      {savedQRCodes?.data?.listQRCodes?.items?.length == 0 && (
-        <p>You have not saved any QR codes.</p>
-      )}
-      {savedQRCodes?.data?.listQRCodes?.items?.length > 0 && (
+      {!qrCodes && <p>You have not saved any QR codes.</p>}
+      {qrCodes && (
         <div>
-          {savedQRCodes.data.listQRCodes.items
-            .filter((qr) => !qr._deleted)
+          {qrCodes
+            ?.filter((qr) => !qr._deleted)
             .map((qr) => (
               <div
                 key={qr.id}
                 style={{
                   margin: '10px',
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'space-around',
                 }}
               >
                 <h1>{qr.url}</h1>
